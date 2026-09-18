@@ -9,7 +9,9 @@ import logging
 
 from fastapi import FastAPI
 
+from app.api.v1.router import router as v1_router
 from app.config import get_settings
+from app.errors import install_error_handlers
 
 
 def create_app() -> FastAPI:
@@ -29,6 +31,9 @@ def create_app() -> FastAPI:
         version="0.1.0",
         summary="Interface OpenAI servie par FastAPI et LangChain.",
     )
+
+    install_error_handlers(application)
+    application.include_router(v1_router)
 
     @application.get("/healthz", tags=["service"])
     async def healthz() -> dict[str, str]:
