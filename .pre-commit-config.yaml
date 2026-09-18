@@ -1,0 +1,47 @@
+# Les hooks appellent les outils *via mise*, donc aux versions figées par
+# mise.lock : pas de second jeu de versions à maintenir, et le hook marche
+# même sans `mise activate` dans le shell.
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: mise exec -- ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: mise exec -- ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ty
+        name: ty check
+        entry: mise exec -- ty check
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true
+
+      - id: conventional-commit
+        name: conventional commit
+        entry: mise exec -- cog verify --ignore-merge-commits --file
+        language: system
+        stages: [commit-msg]
+        require_serial: true

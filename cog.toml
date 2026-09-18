@@ -1,0 +1,13 @@
+# Cocogitto : versions et changelog dérivés des Conventional Commits.
+# Les merge commits des pull requests ne participent ni au calcul de version
+# ni au changelog.
+ignore_merge_commits = true
+from_latest_tag = false
+tag_prefix = "v"
+
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+repository = "fastapi-langchain"
+owner = "Wihrt"
