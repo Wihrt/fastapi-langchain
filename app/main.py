@@ -10,6 +10,7 @@ import logging
 from fastapi import FastAPI
 
 from app.api.v1.router import router as v1_router
+from app.api.v2.router import router as v2_router
 from app.config import get_settings
 from app.errors import install_error_handlers
 
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
 
     install_error_handlers(application)
     application.include_router(v1_router)
+    application.include_router(v2_router)
 
     @application.get("/healthz", tags=["service"])
     async def healthz() -> dict[str, str]:
