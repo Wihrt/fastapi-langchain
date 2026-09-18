@@ -2,7 +2,8 @@
 
 Design : `docs/superpowers/specs/2026-09-18-fastapi-openai-gateway-design.md`
 Branche d'implémentation : `feat/openai-compatible-gateway` (worktree)
-PR : dépôt GitHub → `gh pr` (équivalent de la MR GitLab)
+PR : dépôt GitHub → `gh pr` (équivalent de la MR GitLab). **Une seule PR**,
+un commit conventionnel par étape.
 
 ## 1. Outillage mise
 
@@ -40,7 +41,7 @@ PR : dépôt GitHub → `gh pr` (équivalent de la MR GitLab)
 
 - [ ] `Dockerfile` multi-stage, non-root, healthcheck, sans `uv` dans l'image finale
 - [ ] `.dockerignore`
-- [ ] `compose.yaml` avec `models:` top-level (Docker Model Runner) mappé sur `OPENAI_BASE_URL`/`OPENAI_MODEL`
+- [ ] `compose.yaml` avec `models:` top-level (Docker Model Runner), exemple **Gemma 4** (`ai/gemma4:e4b-q4_K_M`), mappé sur `OPENAI_BASE_URL`/`OPENAI_MODEL`
 - [ ] image buildée et démarrée, `/healthz` prouvé OK
 
 ## 5. Bruno (manuel, hors CI)

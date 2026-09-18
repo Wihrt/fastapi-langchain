@@ -151,12 +151,15 @@ entrypoint, port 8000. Pas de `uv` dans l'image finale.
           model_var: OPENAI_MODEL
   models:
     chat:
-      model: ai/smollm2
+      model: ai/gemma4:e4b-q4_K_M
       context_size: 4096
   ```
 
   La syntaxe longue mappe l'URL et le nom du modèle directement sur nos deux
-  variables d'environnement — aucune glue à écrire. Prérequis : Compose ≥ 2.38
+  variables d'environnement — aucune glue à écrire. Le modèle d'exemple est
+  **Gemma 4** de Google (`ai/gemma4:e4b-q4_K_M`, quantification GGUF adaptée à
+  une exécution locale) ; le README documente un repli plus léger
+  (`ai/smollm2`) pour les postes contraints en RAM. Prérequis : Compose ≥ 2.38
   (poste courant : 5.3.1, Model Runner 1.2.6). Un environnement Bruno `live`
   permet de viser le vrai OpenAI en fixant `OPENAI_API_KEY`/`OPENAI_BASE_URL`.
 
@@ -232,7 +235,7 @@ seule implémentation existe), pas de déploiement (l'image s'arrête à GHCR).
   publiant l'image sémantique dans le job de release lui-même.
 - **`cog bump` sur un dépôt sans tag** : le premier bump part de `0.1.0` ;
   vérifié au premier passage sur `main`.
-- **Réponses lentes du modèle local** (`ai/smollm2` sur CPU) : timeouts Bruno
+- **Réponses lentes du modèle local** (Gemma 4 sur CPU) : timeouts Bruno
   relevés, `max_tokens` bas dans les requêtes de la collection.
 
 ## 10. Plan d'exécution
