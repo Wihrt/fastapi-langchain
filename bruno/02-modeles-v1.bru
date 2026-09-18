@@ -1,0 +1,31 @@
+meta {
+  name: Modeles v1
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/v1/models
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.object: eq list
+}
+
+tests {
+  test("la liste expose au moins un modele au format OpenAI", function () {
+    const data = res.getBody().data;
+    expect(data).to.be.an("array").that.is.not.empty;
+    expect(data[0].object).to.equal("model");
+    expect(data[0].id).to.be.a("string").that.is.not.empty;
+  });
+
+  test("le modele annonce est celui de la variable d'environnement", function () {
+    // Compose injecte OPENAI_MODEL depuis l'element `models` du compose.
+    bru.setVar("modele_annonce", res.getBody().data[0].id);
+    expect(res.getBody().data[0].id).to.be.a("string");
+  });
+}

@@ -1,0 +1,5 @@
+# Seuls pyproject.toml, uv.lock et app/ entrent dans l'image.
+*
+!app
+!pyproject.toml
+!uv.lock

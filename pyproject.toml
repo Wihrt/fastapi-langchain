@@ -1,0 +1,87 @@
+[project]
+name = "fastapi-langchain"
+version = "0.1.0"
+description = "Passerelle chatbot FastAPI exposant l'interface OpenAI."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "langchain-core>=1.6.3",
+    "langchain-openai>=1.6.2",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "uvicorn[standard]>=0.53.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
+
+[tool.uv]
+# Application, pas bibliothèque : uv installe les dépendances, pas le projet.
+package = false
+
+# --- ruff : PEP-8 (E/W/N), PEP-257 (D), PEP-484 (ANN) --------------------
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "A",    # shadowing de builtins
+    "ANN",  # annotations de type (PEP-484)
+    "ASYNC",
+    "B",    # pièges classiques
+    "C4",
+    "D",    # docstrings (PEP-257)
+    "E",    # style (PEP-8)
+    "ERA",  # code commenté
+    "F",
+    "I",    # ordre des imports
+    "N",    # nommage (PEP-8)
+    "PL",
+    "PTH",
+    "RUF",
+    "S",    # sécurité
+    "SIM",
+    "T20",  # print oubliés
+    "TID",
+    "UP",
+    "W",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "D103",     # les tests se documentent par leur nom
+    "PLR2004",  # les codes HTTP littéraux sont plus lisibles qu'une constante
+    "S101",     # assert : c'est le principe
+]
+
+# --- ty : vérification de types -----------------------------------------
+
+[tool.ty.environment]
+python-version = "3.13"
+
+[tool.ty.src]
+include = ["app", "tests"]
+
+# --- pytest --------------------------------------------------------------
+
+[tool.pytest.ini_options]
+# Le projet n'est pas installé (uv package = false) : la racine doit être
+# importable pour que `app` soit résolu depuis les tests.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+asyncio_mode = "auto"

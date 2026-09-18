@@ -1,0 +1,94 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+# Outillage du dépôt. Toutes les tasks sont inline : pas de dossier mise-tasks/.
+
+[tools]
+python = "3.13"
+uv = "0.12"
+ruff = "0.16"
+ty = "0.0.81"
+pre-commit = "4"
+cocogitto = "7"
+node = "22"
+"npm:@usebruno/cli" = "4"
+
+[settings]
+lockfile = true
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+# --- Dépendances ---------------------------------------------------------
+
+[tasks.install]
+description = "Installe les dépendances du projet avec uv"
+run = "uv sync --all-groups"
+
+[tasks.lock]
+description = "Rafraîchit uv.lock et mise.lock"
+run = ["uv lock", "mise install"]
+
+# --- Vérifications (un job CI par task) ----------------------------------
+
+[tasks.lint]
+description = "ruff check"
+run = "ruff check ."
+
+[tasks.format]
+description = "ruff format (réécrit les fichiers)"
+run = "ruff format ."
+
+[tasks.format-check]
+description = "ruff format --check"
+run = "ruff format --check --diff ."
+
+[tasks.typecheck]
+description = "ty check (PEP-484)"
+run = "ty check"
+
+[tasks.test]
+description = "pytest"
+run = "uv run pytest"
+
+[tasks.check-commits]
+description = "Valide les messages de commit (Conventional Commits)"
+run = "cog check"
+
+[tasks.check]
+description = "Toutes les vérifications, comme en CI"
+depends = ["lint", "format-check", "typecheck", "test"]
+
+# --- Exécution -----------------------------------------------------------
+
+[tasks.dev]
+description = "Lance l'API en rechargement à chaud"
+run = "uv run uvicorn app.main:create_app --factory --reload --port 8000"
+
+[tasks.docker-build]
+description = "Construit l'image Docker"
+run = "docker build -t fastapi-langchain:dev ."
+
+[tasks.up]
+description = "Démarre l'API et son modèle local (Docker Model Runner)"
+run = "docker compose up -d --build --wait"
+
+[tasks.down]
+description = "Arrête la stack Compose"
+run = "docker compose down"
+
+[tasks.bruno]
+description = "Joue la suite Bruno contre le conteneur (manuel, hors CI)"
+dir = "bruno"
+run = "bru run --env local --reporter-skip-all-headers -r"
+
+# --- Hooks et release ----------------------------------------------------
+
+[tasks.hooks]
+description = "Installe les hooks pre-commit et commit-msg"
+run = [
+  "pre-commit install --install-hooks",
+  "pre-commit install --hook-type commit-msg",
+]
+
+[tasks.release]
+description = "Calcule la version, écrit le changelog et pose le tag"
+run = "cog bump --auto"

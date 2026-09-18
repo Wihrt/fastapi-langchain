@@ -1,0 +1,30 @@
+# Pile locale : la passerelle et son modèle.
+#
+# Le modèle n'est pas un service : c'est un élément `models` de la spécification
+# Compose, servi par Docker Model Runner. Compose injecte son URL et son nom
+# directement dans les variables attendues par l'application — aucune glue.
+#
+# Prérequis : Docker Compose >= 2.38 et Docker Model Runner activé.
+# Poste contraint en RAM : remplacer le modèle par `ai/smollm2`.
+
+name: fastapi-langchain
+
+services:
+  api:
+    build: .
+    image: fastapi-langchain:dev
+    ports:
+      - "8000:8000"
+    environment:
+      # Model Runner n'exige pas de clé ; l'application en impose une.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-model-runner-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    models:
+      chat:
+        endpoint_var: OPENAI_BASE_URL
+        model_var: OPENAI_MODEL
+
+models:
+  chat:
+    model: ai/gemma4:e4b-q4_K_M
+    context_size: 4096

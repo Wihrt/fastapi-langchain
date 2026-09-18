@@ -1,0 +1,35 @@
+meta {
+  name: Erreur de requete invalide
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/v1/chat/completions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "messages": []
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("l'erreur porte l'enveloppe OpenAI", function () {
+    const erreur = res.getBody().error;
+    expect(erreur.type).to.equal("invalid_request_error");
+    expect(erreur.param).to.equal("messages");
+    expect(erreur).to.have.property("message");
+    expect(erreur).to.have.property("code");
+  });
+
+  test("FastAPI ne laisse pas fuiter son 422", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
