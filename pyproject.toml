@@ -55,13 +55,17 @@ select = [
     "W",
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-    "D103",  # les tests se documentent par leur nom
-    "S101",  # assert : c'est le principe
+    "D103",     # les tests se documentent par leur nom
+    "PLR2004",  # les codes HTTP littéraux sont plus lisibles qu'une constante
+    "S101",     # assert : c'est le principe
 ]
 
 # --- ty : vérification de types -----------------------------------------
@@ -75,6 +79,9 @@ include = ["app", "tests"]
 # --- pytest --------------------------------------------------------------
 
 [tool.pytest.ini_options]
+# Le projet n'est pas installé (uv package = false) : la racine doit être
+# importable pour que `app` soit résolu depuis les tests.
+pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-q --strict-markers --strict-config"
 asyncio_mode = "auto"

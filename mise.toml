@@ -61,7 +61,7 @@ depends = ["lint", "format-check", "typecheck", "test"]
 
 [tasks.dev]
 description = "Lance l'API en rechargement à chaud"
-run = "uv run uvicorn app.main:app --reload --port 8000"
+run = "uv run uvicorn app.main:create_app --factory --reload --port 8000"
 
 [tasks.docker-build]
 description = "Construit l'image Docker"
