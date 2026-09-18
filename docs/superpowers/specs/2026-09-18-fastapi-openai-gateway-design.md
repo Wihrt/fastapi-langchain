@@ -167,11 +167,16 @@ entrypoint, port 8000. Pas de `uv` dans l'image finale.
   ordre des chunks SSE), jamais sur le texte généré : le modèle local est petit
   et non déterministe.
 
+  La collection se découpe en deux familles, ce qui la rend jouable sans
+  modèle : `01`, `02`, `06`, `07` (santé, listes de modèles, erreur de
+  validation) ne sollicitent jamais l'upstream et passent contre le conteneur
+  seul ; `03`, `04`, `05` (complétions et streaming) exigent un modèle servi.
+
 ## 7. CI (GitHub Actions)
 
-Deux workflows. Chaque step passe par une task mise inline.
+Un seul workflow, `ci.yml`. Chaque step passe par une task mise inline.
 
-### `ci.yml` — sur pull request et sur `main`
+### Vérifications — sur pull request et sur `main`
 
 Un job **par type de vérification**, en parallèle, tous sur `mise-action` :
 
@@ -191,10 +196,15 @@ Puis `docker`, qui dépend des cinq :
 
 Bruno n'apparaît dans aucun job : validation externe manuelle (décision 7).
 
-### `release.yml` — sur `main`, après `ci.yml`
+### Release — job du même workflow, `main` uniquement
+
+Un workflow séparé aurait exigé un `workflow_run` pour s'enchaîner après les
+vérifications ; un job `needs: [docker]` gardé par `if: github.ref ==
+'refs/heads/main'` fait la même chose sans indirection.
 
 `cog bump --auto` calcule la version depuis les commits conventionnels, écrit
-`CHANGELOG.md`, crée le tag `vX.Y.Z` et la release GitHub. `cog.toml` porte
+`CHANGELOG.md`, crée le tag `vX.Y.Z` (poussé par ses `post_bump_hooks`) et la
+release GitHub. `cog.toml` porte
 `ignore_merge_commits = true` : les merge commits de PR ne polluent ni le calcul
 de version ni le changelog. Quand un tag est produit, le même job pousse l'image
 avec les tags sémantiques `X.Y.Z`, `X.Y`, `X`.

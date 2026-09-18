@@ -5,6 +5,13 @@ ignore_merge_commits = true
 from_latest_tag = false
 tag_prefix = "v"
 
+# Le commit de changelog et le tag ne valent rien tant qu'ils ne sont pas
+# poussés : cog s'en charge lui-même à la fin du bump.
+post_bump_hooks = [
+  "git push origin main",
+  "git push origin v{{version}}",
+]
+
 [changelog]
 path = "CHANGELOG.md"
 template = "remote"

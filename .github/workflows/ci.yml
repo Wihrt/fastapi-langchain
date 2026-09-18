@@ -1,0 +1,181 @@
+name: CI
+
+# Un job par type de vérification : une pipeline rouge nomme la nature du
+# problème sans qu'on ait à ouvrir les journaux.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint:
+    name: Lint (ruff check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - run: mise run lint
+
+  format:
+    name: Format (ruff format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - run: mise run format-check
+
+  typecheck:
+    name: Typage (ty)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - run: mise run install
+      - run: mise run typecheck
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - run: mise run install
+      - run: mise run test
+
+  commits:
+    name: Messages de commit (cog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # cog check parcourt l'historique : un clone superficiel le prive
+          # des commits à vérifier.
+          fetch-depth: 0
+      - uses: jdx/mise-action@v4
+      - run: mise run check-commits
+
+  docker:
+    name: Image Docker
+    needs: [lint, format, typecheck, test, commits]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Se connecter à GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculer les tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Construire, et publier seulement depuis main
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          # Sur pull request on prouve que l'image se construit, sans rien
+          # publier ; l'émulation arm64 y serait du temps perdu.
+          push: ${{ github.event_name == 'push' }}
+          platforms: ${{ github.event_name == 'push' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: Release (cog)
+    needs: [docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: jdx/mise-action@v4
+
+      - name: Identifier l'auteur des commits de release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Calculer la version
+        id: bump
+        run: |
+          # cog échoue quand aucun commit ne justifie de version : ce n'est pas
+          # une panne de pipeline, c'est un « rien à publier ».
+          if mise run release; then
+            echo "publiee=true" >> "$GITHUB_OUTPUT"
+            echo "version=$(mise exec -- cog get-version)" >> "$GITHUB_OUTPUT"
+          else
+            echo "Aucune version à publier."
+            echo "publiee=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publier la release GitHub
+        if: steps.bump.outputs.publiee == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.bump.outputs.version }}" \
+            --title "v${{ steps.bump.outputs.version }}" \
+            --notes-file CHANGELOG.md
+
+      - uses: docker/setup-buildx-action@v4
+        if: steps.bump.outputs.publiee == 'true'
+
+      - name: Se connecter à GHCR
+        if: steps.bump.outputs.publiee == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculer les tags sémantiques
+        id: meta
+        if: steps.bump.outputs.publiee == 'true'
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ steps.bump.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.bump.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ steps.bump.outputs.version }}
+
+      # Le tag est poussé avec GITHUB_TOKEN : il ne redéclenche aucun workflow.
+      # L'image sémantique se publie donc ici, pas dans un `on: push: tags`.
+      - name: Publier l'image sémantique
+        if: steps.bump.outputs.publiee == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

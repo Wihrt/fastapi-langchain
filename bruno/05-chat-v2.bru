@@ -1,0 +1,52 @@
+meta {
+  name: Chat v2
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/v2/chat/completions
+  body: json
+  auth: none
+}
+
+headers {
+  X-Request-ID: bruno-verification
+}
+
+body:json {
+  {
+    "messages": [
+      { "role": "user", "content": "Dis bonjour." }
+    ],
+    "max_tokens": 48,
+    "temperature": 0
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.object: eq chat.completion
+  res.body.request_id: eq bruno-verification
+}
+
+tests {
+  test("v2 reste lisible par un client OpenAI", function () {
+    const corps = res.getBody();
+    expect(corps.choices[0].message.role).to.equal("assistant");
+    expect(corps.usage.total_tokens).to.be.a("number");
+  });
+
+  test("v2 nomme le provider et le modele", function () {
+    expect(res.getBody().provider.name).to.equal("langchain-openai");
+    expect(res.getBody().provider.model).to.be.a("string").that.is.not.empty;
+  });
+
+  test("v2 mesure la latence", function () {
+    expect(res.getBody().latency_ms).to.be.a("number").that.is.at.least(0);
+  });
+
+  test("l'identifiant de correlation revient aussi en en-tete", function () {
+    expect(res.getHeader("x-request-id")).to.equal("bruno-verification");
+  });
+}

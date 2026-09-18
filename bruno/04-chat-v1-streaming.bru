@@ -1,0 +1,71 @@
+meta {
+  name: Chat v1 streaming
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/v1/chat/completions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "messages": [
+      { "role": "user", "content": "Compte jusqu'a trois." }
+    ],
+    "max_tokens": 48,
+    "temperature": 0,
+    "stream": true
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("le flux est servi en text/event-stream", function () {
+    expect(res.getHeader("content-type")).to.include("text/event-stream");
+  });
+
+  test("le flux se termine par la sentinelle [DONE]", function () {
+    const lignes = String(res.getBody())
+      .split("\n")
+      .filter((ligne) => ligne.startsWith("data: "));
+    expect(lignes[lignes.length - 1]).to.equal("data: [DONE]");
+  });
+
+  test("le premier fragment annonce le role assistant", function () {
+    const premier = JSON.parse(
+      String(res.getBody())
+        .split("\n")
+        .filter((ligne) => ligne.startsWith("data: "))[0]
+        .replace("data: ", "")
+    );
+    expect(premier.object).to.equal("chat.completion.chunk");
+    expect(premier.choices[0].delta.role).to.equal("assistant");
+    expect(premier.choices[0].finish_reason).to.equal(null);
+  });
+
+  test("le dernier fragment porte la raison d'arret", function () {
+    const fragments = String(res.getBody())
+      .split("\n")
+      .filter((ligne) => ligne.startsWith("data: ") && !ligne.includes("[DONE]"))
+      .map((ligne) => JSON.parse(ligne.replace("data: ", "")));
+    const dernier = fragments[fragments.length - 1];
+    expect(dernier.choices[0].finish_reason).to.be.a("string");
+    expect(dernier.choices[0].delta).to.deep.equal({});
+  });
+
+  test("tous les fragments partagent le meme identifiant", function () {
+    const identifiants = new Set(
+      String(res.getBody())
+        .split("\n")
+        .filter((ligne) => ligne.startsWith("data: ") && !ligne.includes("[DONE]"))
+        .map((ligne) => JSON.parse(ligne.replace("data: ", "")).id)
+    );
+    expect(identifiants.size).to.equal(1);
+  });
+}

@@ -1,0 +1,63 @@
+meta {
+  name: Chat v1
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/v1/chat/completions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "messages": [
+      { "role": "system", "content": "Reponds en une phrase courte." },
+      { "role": "user", "content": "Dis bonjour." }
+    ],
+    "max_tokens": 48,
+    "temperature": 0
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.object: eq chat.completion
+}
+
+tests {
+  test("la reponse porte exactement les champs du contrat OpenAI", function () {
+    expect(Object.keys(res.getBody()).sort()).to.deep.equal([
+      "choices",
+      "created",
+      "id",
+      "model",
+      "object",
+      "usage"
+    ]);
+  });
+
+  test("l'identifiant suit la convention chatcmpl-", function () {
+    expect(res.getBody().id).to.match(/^chatcmpl-/);
+  });
+
+  test("le modele repondu est celui choisi par variable d'environnement", function () {
+    expect(res.getBody().model).to.equal(bru.getVar("modele_annonce"));
+  });
+
+  test("le choix porte un message d'assistant non vide", function () {
+    const choice = res.getBody().choices[0];
+    expect(choice.index).to.equal(0);
+    expect(choice.message.role).to.equal("assistant");
+    expect(choice.message.content).to.be.a("string").that.is.not.empty;
+    expect(choice.finish_reason).to.be.a("string");
+  });
+
+  test("le decompte de jetons est coherent", function () {
+    const usage = res.getBody().usage;
+    expect(usage.prompt_tokens).to.be.a("number");
+    expect(usage.completion_tokens).to.be.a("number");
+    expect(usage.total_tokens).to.be.a("number");
+  });
+}

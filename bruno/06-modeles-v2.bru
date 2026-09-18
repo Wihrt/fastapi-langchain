@@ -1,0 +1,23 @@
+meta {
+  name: Modeles v2
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/v2/models
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.object: eq list
+  res.body.provider: eq langchain-openai
+}
+
+tests {
+  test("v2 expose la meme liste que v1, augmentee du provider", function () {
+    expect(res.getBody().data[0].id).to.equal(bru.getVar("modele_annonce"));
+  });
+}
